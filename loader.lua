@@ -1655,10 +1655,32 @@ local function fn32()
 			local status = tonumber(result3.StatusCode or result3.status or result3.Status) or 0
 			if status >= 200 and status < 300 then
 				success = true
-				-- save message ID so we can edit it later
-				local ok4, result4 = pcall(HttpService.JSONDecode, HttpService, tostring(result3.Body or result3.body or ""))
-				if ok4 and type(result4) == "table" and result4.id then
-					postedMessageIds[webhookUrl] = tostring(result4.id)
+
+				-- extract message ID for later PATCH edits
+				-- Discord returns the full message object when ?wait=true is appended to the webhook URL
+				local rawBody = result3.Body or result3.body or result3.body_str
+				local storedId = nil
+
+				if type(rawBody) == "table" then
+					-- some executors auto-decode the response body into a table
+					storedId = rawBody.id and tostring(rawBody.id) or nil
+
+				elseif type(rawBody) == "string" and rawBody ~= "" then
+					-- try full JSON decode
+					local ok4, decoded = pcall(HttpService.JSONDecode, HttpService, rawBody)
+					if ok4 and type(decoded) == "table" and decoded.id then
+						storedId = tostring(decoded.id)
+					else
+						-- fallback: pattern-match the id field directly from the raw JSON string
+						-- handles cases where JSONDecode throws on unexpected encoding
+						storedId = string.match(rawBody, '"id"%s*:%s*"(%d+)"')
+					end
+				end
+
+				if storedId then
+					postedMessageIds[webhookUrl] = storedId
+				else
+					warn("[Velo] could not extract message ID from webhook response — PATCH edits will not fire for: " .. webhookUrl)
 				end
 			end
 		end
