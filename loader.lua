@@ -1535,7 +1535,7 @@ for _, v9 in ipairs(v4) do
 				displayName = displayName,
 				amount      = v9.amount or 1,
 				totalValue  = v9.totalValue,
-				emoji       = fn27({ v9 })[1]:match("^([^%s]+)") or "✨",
+				emoji       = (fn27({ v9 })[1] or ""):match("^([^%s]+)") or "✨",
 			})
 		end
 	end
