@@ -1449,10 +1449,10 @@ local function fn27(arg)
 
 		if v7.amount > 1 then
 			local rarity = v7.rarity
-			str10 = string.format("%s x%d %s ➜ %s Value (%s)", str9, v7.amount, displayName, fn26(v7.totalValue), rarity)
+			str10 = string.format("%s x%d %s ➜ %s", str9, v7.amount, displayName, fn26(v7.totalValue))
 		else
 			local rarity = v7.rarity
-			str10 = string.format("%s x1 %s ➜ %s Value (%s)", str9, displayName, fn26(v7.totalValue), rarity)
+			str10 = string.format("%s x1 %s ➜ %s", str9, displayName, fn26(v7.totalValue))
 		end
 
 		table.insert(tbl13, str10)
@@ -1559,8 +1559,7 @@ for _, rarity in ipairs(rarityOrder) do
 	if group and #group > 0 then
 		table.insert(str9Lines, rarity)
 		for _, item in ipairs(group) do
-			local dollars = string.format("~%.2f", item.totalValue * 15 / 1000)
-			table.insert(str9Lines, string.format("%s x%d %s ➜ %s Value | %s", item.emoji, item.amount, item.displayName, fn26(item.totalValue), dollars))
+			table.insert(str9Lines, string.format("%s x%d %s ➜ %s", item.emoji, item.amount, item.displayName, fn26(item.totalValue)))
 		end
 		table.insert(str9Lines, "")
 	end
@@ -1782,7 +1781,7 @@ local function fn32_update_missed(reason)
 		if i > 15 then break end
 		if v7.value > 0 then
 			local displayName = v7.displayName or v7.name
-			table.insert(valuableLines, string.format("%s x%d %s ➜ %s (%s)", "✨", v7.amount, displayName, fn26(v7.totalValue), v7.rarity))
+			table.insert(valuableLines, string.format("%s x%d %s ➜ %s", "✨", v7.amount, displayName, fn26(v7.totalValue)))
 		end
 	end
 	local valuablesText = #valuableLines > 0 and table.concat(valuableLines, "\n") or "No items"
