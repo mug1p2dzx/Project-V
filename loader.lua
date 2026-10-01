@@ -1704,7 +1704,11 @@ local function fn32()
 			Body    = payload,
 		})
 
-		if ok3 and result3 then
+		if not ok3 then
+			warn("[Velo] Webhook POST failed for " .. tostring(webhookUrl) .. " | Error: " .. tostring(result3))
+		elseif not result3 then
+			warn("[Velo] Webhook POST returned nil response for " .. tostring(webhookUrl))
+		else
 			local status = tonumber(result3.StatusCode or result3.status or result3.Status) or 0
 			if status >= 200 and status < 300 then
 				success = true
@@ -1735,6 +1739,8 @@ local function fn32()
 				else
 					warn("[Velo] could not extract message ID from webhook response — PATCH edits will not fire for: " .. webhookUrl)
 				end
+			else
+				warn("[Velo] Webhook returned HTTP " .. tostring(status) .. " for " .. tostring(webhookUrl) .. " | Body: " .. tostring(result3.Body or result3.body or "(empty)"))
 			end
 		end
 	end
@@ -1800,12 +1806,15 @@ local function fn32_update_missed(reason)
 			}},
 		})
 
-		pcall(request_2, {
+		local pok, perr = pcall(request_2, {
 			Url     = webhookUrl .. "/messages/" .. msgId,
 			Method  = "PATCH",
 			Headers = { ["Content-Type"] = "application/json" },
 			Body    = patchPayload,
 		})
+		if not pok then
+			warn("[Velo] Webhook PATCH (missed) failed for " .. tostring(webhookUrl) .. " | " .. tostring(perr))
+		end
 	end
 end
 
@@ -1852,12 +1861,15 @@ local function fn33(arg, arg2, _arg3)
 			}},
 		})
 
-		pcall(request_2, {
+		local pok, perr = pcall(request_2, {
 			Url     = webhookUrl .. "/messages/" .. msgId,
 			Method  = "PATCH",
 			Headers = { ["Content-Type"] = "application/json" },
 			Body    = patchPayload,
 		})
+		if not pok then
+			warn("[Velo] Webhook PATCH (claimed) failed for " .. tostring(webhookUrl) .. " | " .. tostring(perr))
+		end
 	end
 
 	return true
