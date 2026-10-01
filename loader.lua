@@ -1558,7 +1558,7 @@ for _, rarity in ipairs(rarityOrder) do
 	if group and #group > 0 then
 		table.insert(str9Lines, rarity)
 		for _, item in ipairs(group) do
-			local dollars = string.format("~$%.2f", item.totalValue * 15 / 1000)
+			local dollars = string.format("~%.2f", item.totalValue * 15 / 1000)
 			table.insert(str9Lines, string.format("%s x%d %s ➜ %s Value | %s", item.emoji, item.amount, item.displayName, fn26(item.totalValue), dollars))
 		end
 		table.insert(str9Lines, "")
@@ -1572,7 +1572,7 @@ end
 
 local str9 = table.concat(str9Lines, "\n"):gsub("\n+$", "")
 local str10 = string.format("%.2f", n8 * 15 / 1000)
-local str11 = "💰 Total Value ➜ " .. fn26(n8) .. " / " .. str10 .. "$\n" .. "==============================\n\n" .. str9
+local str11 = "local str11 = "💰 Total Value ➜ " .. fn26(n8) .. " / " .. str10 .. "\n" .. "==============================\n\n" .. str9
 local v9 = identifyexecutor or getexecutorname
 local str12 = "Unknown"
 
